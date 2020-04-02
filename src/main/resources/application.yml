@@ -1,0 +1,13 @@
+security:
+  auth:
+    enable: true
+    paths:
+      - /**
+    excluded-paths:
+      - /login
+  jwt:
+    secret: abc
+
+web:
+  cors:
+    enable: true
