@@ -6,10 +6,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @EnableConfigurationProperties
 @SpringBootApplication
-public class RestDogApplication {
+public class RestBootApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(RestDogApplication.class, args);
+        SpringApplication.run(RestBootApplication.class, args);
     }
 
 }

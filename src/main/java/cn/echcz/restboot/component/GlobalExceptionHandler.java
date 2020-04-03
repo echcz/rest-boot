@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorVo handleException(MethodArgumentNotValidException e) {
+    public ErrorVo handleArgumentNotValidExceptionException(MethodArgumentNotValidException e) {
         BindingResult result = e.getBindingResult();
         List<ObjectError> allErrors = result.getAllErrors();
         List<String> msgList = allErrors.stream().map(ObjectError::getDefaultMessage)
@@ -40,14 +40,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ServletException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorVo handleServletRequestBindingException(ServletException e) {
-        return new ErrorVo(ErrorStatus.BAD_REQUEST.getCode(), e.getMessage());
+    public ErrorVo handleServletException(ServletException e) {
+        return ErrorVo.fromErrorStatus(ErrorStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorVo handleException(Exception e) {
-        return new ErrorVo(ErrorStatus.UNKNOWN.getCode(), e.getMessage());
+        return ErrorVo.fromErrorStatus(ErrorStatus.UNKNOWN);
     }
 
 }

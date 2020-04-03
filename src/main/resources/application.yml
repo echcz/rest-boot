@@ -1,8 +1,6 @@
 security:
   auth:
     enable: true
-    paths:
-      - /**
     excluded-paths:
       - /login
   jwt:

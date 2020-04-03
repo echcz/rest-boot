@@ -52,8 +52,7 @@ public class AuthenticateFilter implements Filter {
             if (pathMatcher.match(excludedPath, requestURI)) {
                 // 不被权限系统跟踪
                 // 请求-响应完成后，需要清理AuthContext，下同
-                filterChain.doFilter(servletRequest, servletResponse);
-                AuthContext.clear();
+                chainDoFilter(filterChain, servletRequest, servletResponse);
                 return;
             }
         }
@@ -72,8 +71,7 @@ public class AuthenticateFilter implements Filter {
                     // 权限认证通过:
                     // 将认证信息保存到AuthContext中，过滤器放行
                     AuthContext.setAuthentication(finalAuthentication);
-                    filterChain.doFilter(servletRequest, servletResponse);
-                    AuthContext.clear();
+                    chainDoFilter(filterChain, servletRequest, servletResponse);
                 } else {
                     // 权限认证没通过:
                     // 返回异常响应401
@@ -90,8 +88,18 @@ public class AuthenticateFilter implements Filter {
             }
         }
         // 不被权限系统跟踪
-        filterChain.doFilter(servletRequest, servletResponse);
-        AuthContext.clear();
+        chainDoFilter(filterChain, servletRequest, servletResponse);
+    }
+
+    /*
+     * 确保在处理完成后清理AuthContext
+     */
+    private void chainDoFilter(FilterChain chain, ServletRequest request, ServletResponse response) throws IOException, ServletException {
+        try {
+            chain.doFilter(request, response);
+        } finally {
+            AuthContext.clear();
+        }
     }
 
 }

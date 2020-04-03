@@ -27,6 +27,9 @@ public class GlobalErrorController extends AbstractErrorController {
 
     @RequestMapping("${server.error.path:${error.path:/error}}")
     public ResponseEntity<ErrorVo> error(HttpServletRequest request, HttpServletResponse response) {
+        if (response.isCommitted()) {
+            return null;
+        }
         HttpStatus status = getStatus(request);
         ErrorVo body;
         switch (status) {
