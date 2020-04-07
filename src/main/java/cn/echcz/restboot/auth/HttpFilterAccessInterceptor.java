@@ -13,7 +13,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class HttpFilterAccessInterceptor implements AccessInterceptor<HttpFilterInvoker> {
     @NonNull
-    private PathAccessConditionMapper pathAccessConditionMapper;
+    private PathAccessConditionMapper permissionContext;
 
     @Override
     public InterceptorStatus<HttpFilterInvoker> beforeAccess(HttpFilterInvoker invoker, Authentication authentication) {
@@ -23,7 +23,7 @@ public class HttpFilterAccessInterceptor implements AccessInterceptor<HttpFilter
         String method = request.getMethod();
         List<String> path = PathUtils.pathStrToList(requestURI);
         path.add(method);
-        AccessCondition condition = pathAccessConditionMapper.getConditionByPath(path);
+        AccessCondition condition = permissionContext.findConditionByPath(path);
         if (condition == null || condition.check(authentication)) {
             // 如果没有权限要求或满足权限要求:
             // 返回允许访问状态

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.echcz.restboot.mapper.RoleMapper">
+    <resultMap id="BaseResultMap" type="cn.echcz.restboot.model.Role">
+        <id property="id" column="id" jdbcType="INTEGER" />
+        <result property="name" column="name" jdbcType="VARCHAR" />
+        <result property="state" column="state" jdbcType="TINYINT" />
+        <result property="remark" column="remark" jdbcType="VARCHAR" />
+    </resultMap>
+
+    <insert id="add" parameterType="cn.echcz.restboot.model.Role">
+        INSERT INTO role (id, name, state, remark)
+        VALUES (#{id,jdbcType=INTEGER}, #{name,jdbcType=VARCHAR}, #{remark,jdbcType=VARCHAR})
+    </insert>
+
+    <update id="edit" parameterType="cn.echcz.restboot.model.Role">
+        UPDATE role
+        <set>
+            <if test="name!=null and name != ''">
+                name = #{name,jdbcType=VARCHAR},
+            </if>
+            <if test="state!=null and state&gt;0">
+                state = #{state,jdbcType=TINYINT},
+            </if>
+            <if test="remark!=null">
+                remark = #{remark,jdbcType=VARCHAR},
+            </if>
+        </set>
+        WHERE id = #{id,jdbcType=INTEGER}
+    </update>
+
+    <select id="findById" parameterType="integer" resultMap="BaseResultMap">
+        SELECT id, name, state, remark
+        FROM role
+        WHERE id = #{id,jdbcType=INTEGER}
+    </select>
+
+    <select id="findAll" parameterType="integer" resultMap="BaseResultMap">
+        SELECT id, name, state, remark
+        FROM role
+    </select>
+</mapper>

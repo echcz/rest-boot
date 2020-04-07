@@ -37,7 +37,7 @@ public class JwtHandler {
                 .withExpiresAt(new Date(System.currentTimeMillis() + jwtProperties.getMaxAge()));
     }
 
-    public String createTokenByUserId(Long userId) {
+    public String createTokenByUserId(Integer userId) {
         JWTCreator.Builder builder = getJwtCreatorBuilder();
         builder.withClaim(authProperties.getJwtKey(), userId);
         return builder.sign(jwtProperties.getAlgorithm());
@@ -59,9 +59,9 @@ public class JwtHandler {
         return jwtVerifier.verify(token);
     }
 
-    public Long getUserIdFromToken(String token) throws JWTVerificationException{
+    public Integer getUserIdFromToken(String token) throws JWTVerificationException{
         DecodedJWT jwt = verifyToken(token);
-        return jwt.getClaim(authProperties.getJwtKey()).asLong();
+        return jwt.getClaim(authProperties.getJwtKey()).asInt();
     }
 
 }

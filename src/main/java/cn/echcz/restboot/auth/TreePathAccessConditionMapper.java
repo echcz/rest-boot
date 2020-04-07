@@ -2,11 +2,12 @@ package cn.echcz.restboot.auth;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-@Component
 public class TreePathAccessConditionMapper implements PathAccessConditionMapper {
     private static class TreePathMatcherNode {
         @Getter
@@ -31,6 +32,10 @@ public class TreePathAccessConditionMapper implements PathAccessConditionMapper 
             return pathIds.remove(pathId);
         }
 
+        public boolean containsPathId(Integer pathId) {
+            return pathIds.contains(pathId);
+        }
+
         public boolean pathIdsIsEmpty() {
             return pathIds.isEmpty();
         }
@@ -39,11 +44,34 @@ public class TreePathAccessConditionMapper implements PathAccessConditionMapper 
     private static final String singleWildcard = "*";
     private static final String multiWildcard = "**";
 
+    private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
+    private final Lock writeLock;
+    private final Lock readLock;
     private TreePathMatcherNode root = new TreePathMatcherNode("");
 
+    public TreePathAccessConditionMapper() {
+        writeLock = readWriteLock.writeLock();
+        readLock = readWriteLock.readLock();
+    }
+
     @Override
-    public void add(Integer pathId, List<String> path, AccessCondition condition) {
-        addToNode(root, pathId, path, 0, condition);
+    public void clear() {
+        try {
+            writeLock.lock();
+            root = new TreePathMatcherNode("");
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    @Override
+    public void add(PathAccessCondition pathAccessCondition) {
+        try {
+            writeLock.lock();
+            addToNode(root, pathAccessCondition.getPathId(), pathAccessCondition.getPath(), 0, pathAccessCondition.getAccessCondition());
+        } finally {
+            writeLock.unlock();
+        }
     }
 
     private void addToNode(TreePathMatcherNode node, Integer pathId, List<String> path, int index, AccessCondition condition) {
@@ -104,8 +132,13 @@ public class TreePathAccessConditionMapper implements PathAccessConditionMapper 
 
     @Override
     public void deleteByPathId(Integer pathId) {
-        if (root.deletedPathId(pathId)) {
-            deleteByNode(root, pathId);
+        try {
+            writeLock.lock();
+            if (root.deletedPathId(pathId)) {
+                deleteByNode(root, pathId);
+            }
+        } finally {
+            writeLock.unlock();
         }
     }
 
@@ -134,11 +167,51 @@ public class TreePathAccessConditionMapper implements PathAccessConditionMapper 
     }
 
     @Override
-    public AccessCondition getConditionByPath(List<String> path) {
-        return getConditionByNode(root, path, -1);
+    public PathAccessCondition findPathByPathId(Integer pathId) {
+        try {
+            readLock.lock();
+            if (root.containsPathId(pathId)) {
+                List<String> path = new ArrayList<>();
+                PathAccessCondition.PathAccessConditionBuilder builder = PathAccessCondition.builder();
+                findPathByNode(root, pathId, path, builder);
+                builder.pathId(pathId);
+                builder.path(path);
+                return builder.build();
+            } else {
+                return null;
+            }
+        } finally {
+            readLock.unlock();
+        }
     }
 
-    private AccessCondition getConditionByNode(TreePathMatcherNode node, List<String> path, int index) {
+    private void findPathByNode(TreePathMatcherNode node, Integer pathId,
+                                List<String> path, PathAccessCondition.PathAccessConditionBuilder builder) {
+        // 遍历, 查找pathId牵连的子
+        for (TreePathMatcherNode child : node.getChildren()) {
+            if (child.containsPathId(pathId)) {
+                // 找到牵连的子，将child.getName加入到path中
+                path.add(child.getName());
+                // 递归
+                findPathByNode(child, pathId, path, builder);
+                return;
+            }
+        }
+        // 没有牵连的子，也就是最后一层，则将此层的值放到构造器中
+        builder.accessCondition(node.getCondition());
+    }
+
+    @Override
+    public AccessCondition findConditionByPath(List<String> path) {
+        try {
+            readLock.lock();
+            return findConditionByNode(root, path, -1);
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    private AccessCondition findConditionByNode(TreePathMatcherNode node, List<String> path, int index) {
         // 自己是否匹配
         if (index == -1 || path.get(index).equals(node.getName())
                 || singleWildcard.equals(node.getName()) || multiWildcard.equals(node.getName())) {
@@ -152,7 +225,7 @@ public class TreePathAccessConditionMapper implements PathAccessConditionMapper 
                 // 否:
                 // 遍历递归子，是否有返回有效条件
                 for (TreePathMatcherNode child : node.getChildren()) {
-                    AccessCondition childCodition = getConditionByNode(child, path, index + 1);
+                    AccessCondition childCodition = findConditionByNode(child, path, index + 1);
                     if (childCodition != null) {
                         // 是：
                         // 返回子返回的条件
@@ -164,7 +237,7 @@ public class TreePathAccessConditionMapper implements PathAccessConditionMapper 
                 if (multiWildcard.equals(node.getName())) {
                     // 是:
                     // 返回递归
-                    return getConditionByNode(node, path, index + 1);
+                    return findConditionByNode(node, path, index + 1);
                 } else {
                     // 否:
                     // 返回null
